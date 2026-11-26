@@ -46,21 +46,24 @@ dependencies {
 }
 
 
-// Automatically copy the APK after a successful debug build.
-tasks.register("copyDebugApk", Copy) {
-    def builtApk = file("$buildDir/outputs/apk/debug/app-debug.apk")
-    from(builtApk)
-    into("/storage/emulated/0/modding/CompendiumNX")
-    rename { "Compendium-NX.apk" }
-    doLast {
-        if (file("/storage/emulated/0/modding/CompendiumNX/Compendium-NX.apk").exists()) {
-            builtApk.delete()
+// Preserve automatic APK copying for local Termux builds.
+// CI builds skip this task and retain the APK for artifact upload.
+if (!project.hasProperty("ciBuild")) {
+    tasks.register("copyDebugApk", Copy) {
+        def builtApk = file("$buildDir/outputs/apk/debug/app-debug.apk")
+        from(builtApk)
+        into("/storage/emulated/0/modding/CompendiumNX")
+        rename { "Compendium-NX.apk" }
+        doLast {
+            if (file("/storage/emulated/0/modding/CompendiumNX/Compendium-NX.apk").exists()) {
+                builtApk.delete()
+            }
         }
     }
-}
 
-afterEvaluate {
-    tasks.named("assembleDebug").configure {
-        finalizedBy("copyDebugApk")
+    afterEvaluate {
+        tasks.named("assembleDebug").configure {
+            finalizedBy("copyDebugApk")
+        }
     }
 }
