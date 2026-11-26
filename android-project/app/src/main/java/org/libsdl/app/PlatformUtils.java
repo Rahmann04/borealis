@@ -1,6 +1,7 @@
 package org.libsdl.app;
 
 import android.app.Activity;
+import com.borealis.demo.DemoActivity;
 import android.content.ContentResolver;
 import android.content.Context;
 import android.content.Intent;
@@ -19,6 +20,27 @@ import android.view.Window;
 import android.view.WindowManager;
 
 public class PlatformUtils {
+    public static void launchP5R() {
+        Activity activity = (Activity) SDLActivity.getContext();
+        if (activity == null) return;
+        activity.runOnUiThread(() -> {
+            if (activity instanceof DemoActivity) {
+                ((DemoActivity) activity).launchP5R();
+            }
+        });
+    }
+
+    public static void openStoragePicker() {
+        Activity activity = (Activity) SDLActivity.getContext();
+        if (activity == null) return;
+
+        activity.runOnUiThread(() -> {
+            if (activity instanceof DemoActivity) {
+                ((DemoActivity) activity).openStoragePicker();
+            }
+        });
+    }
+
     public static boolean isBatterySupported() {
         Context context = SDLActivity.getContext();
         Intent batteryIntent = context.registerReceiver(null, new IntentFilter(Intent.ACTION_BATTERY_CHANGED));

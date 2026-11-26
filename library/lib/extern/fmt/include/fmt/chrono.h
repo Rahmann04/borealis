@@ -11,7 +11,7 @@
 #ifndef FMT_MODULE
 #  include <algorithm>
 #  include <chrono>
-#  include <cmath>    // std::isfinite
+#  include <cmath>    // __builtin_isfinite
 #  include <cstring>  // std::memcpy
 #  include <ctime>
 #  include <iterator>
@@ -133,7 +133,7 @@ FMT_CONSTEXPR auto safe_float_conversion(const From from, int& ec) -> To {
   static_assert(std::is_floating_point<To>::value, "To must be floating");
 
   // catch the only happy case
-  if (std::isfinite(from)) {
+  if (__builtin_isfinite(from)) {
     if (from >= T::lowest() && from <= (T::max)()) {
       return static_cast<To>(from);
     }

@@ -281,7 +281,17 @@ public class SDLActivity extends Activity implements View.OnSystemUiVisibilityCh
     // Load the .so
     public void loadLibraries() {
        for (String lib : getLibraries()) {
-          SDL.loadLibrary(lib);
+          com.borealis.demo.CompendiumLogger.log("INFO", "LIBRARY_LOAD_START", lib);
+          try {
+             SDL.loadLibrary(lib);
+             com.borealis.demo.CompendiumLogger.log("INFO", "LIBRARY_LOAD_SUCCESS", lib);
+          } catch (Throwable error) {
+             com.borealis.demo.CompendiumLogger.log("FATAL", "LIBRARY_LOAD_FAILED",
+                 lib + ": " + android.util.Log.getStackTraceString(error));
+             if (error instanceof Error) throw (Error) error;
+             if (error instanceof RuntimeException) throw (RuntimeException) error;
+             throw new RuntimeException(error);
+          }
        }
     }
 
@@ -358,22 +368,55 @@ public class SDLActivity extends Activity implements View.OnSystemUiVisibilityCh
 
         if (mBrokenLibraries) {
             mSingleton = this;
-            AlertDialog.Builder dlgAlert  = new AlertDialog.Builder(this);
-            dlgAlert.setMessage("An error occurred while trying to start the application. Please try again and/or reinstall."
-                  + System.getProperty("line.separator")
-                  + System.getProperty("line.separator")
-                  + "Error: " + errorMsgBrokenLib);
+            final String fullError =
+                "An error occurred while trying to start the application. "
+                + "Please try again and/or reinstall."
+                + System.getProperty("line.separator")
+                + System.getProperty("line.separator")
+                + "Package: " + getPackageName()
+                + System.getProperty("line.separator")
+                + "Error: " + errorMsgBrokenLib;
+
+            AlertDialog.Builder dlgAlert = new AlertDialog.Builder(this);
             dlgAlert.setTitle("SDL Error");
+
+            android.widget.TextView errorText = new android.widget.TextView(this);
+            errorText.setText(fullError);
+            errorText.setTextIsSelectable(true);
+            errorText.setTextSize(14);
+            errorText.setPadding(24, 20, 24, 20);
+
+            android.widget.ScrollView errorScroll =
+                new android.widget.ScrollView(this);
+            errorScroll.addView(errorText);
+            errorScroll.setFillViewport(true);
+
+            dlgAlert.setView(errorScroll);
+            dlgAlert.setNeutralButton("Copy All",
+                new DialogInterface.OnClickListener() {
+                    @Override
+                    public void onClick(DialogInterface dialog, int id) {
+                        android.content.ClipboardManager clipboard =
+                            (android.content.ClipboardManager)
+                            getSystemService(Context.CLIPBOARD_SERVICE);
+                        if (clipboard != null) {
+                            clipboard.setPrimaryClip(
+                                ClipData.newPlainText("SDL Error", fullError));
+                            android.widget.Toast.makeText(
+                                SDLActivity.this, "Error copied",
+                                android.widget.Toast.LENGTH_SHORT).show();
+                        }
+                    }
+                });
             dlgAlert.setPositiveButton("Exit",
                 new DialogInterface.OnClickListener() {
                     @Override
-                    public void onClick(DialogInterface dialog,int id) {
-                        // if this button is clicked, close current activity
+                    public void onClick(DialogInterface dialog, int id) {
                         SDLActivity.mSingleton.finish();
                     }
                 });
-           dlgAlert.setCancelable(false);
-           dlgAlert.create().show();
+            dlgAlert.setCancelable(false);
+            dlgAlert.create().show();
 
            return;
         }
@@ -1880,8 +1923,18 @@ class SDLMain implements Runnable {
         }
 
         Log.v("SDL", "Running main function " + function + " from library " + library);
+        com.borealis.demo.CompendiumLogger.log("INFO", "NATIVE_MAIN_START",
+            "library=" + library + " function=" + function);
 
-        SDLActivity.nativeRunMain(library, function, arguments);
+        try {
+            SDLActivity.nativeRunMain(library, function, arguments);
+            com.borealis.demo.CompendiumLogger.log("INFO", "NATIVE_MAIN_EXIT",
+                "Native main returned normally");
+        } catch (Throwable error) {
+            com.borealis.demo.CompendiumLogger.log("FATAL", "NATIVE_MAIN_FAILED",
+                android.util.Log.getStackTraceString(error));
+            throw error;
+        }
 
         Log.v("SDL", "Finished main function");
 

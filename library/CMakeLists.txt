@@ -197,7 +197,19 @@ elseif(PLATFORM_PS4)
         set(BRLS_PLATFORM_RESOURCES_PATH "\"/app0/resources/\"")
     endif ()
 elseif(PLATFORM_ANDROID)
-    find_library(SDL2 NAMES SDL2 SDL2main)
+    set(BRLS_PLATFORM_RESOURCES_PATH "\"./resources/\"")
+    set(BUILD_SHARED_LIBS ON CACHE BOOL "" FORCE)
+    add_subdirectory(${BOREALIS_PATH}/lib/extern/SDL EXCLUDE_FROM_ALL)
+
+    file(GLOB ANDROID_NDK_GLES_INCLUDES
+        "$ENV{HOME}/android-sdk/ndk/*/toolchains/llvm/prebuilt/*/sysroot/usr/include")
+    foreach(ANDROID_GLES_INCLUDE IN LISTS ANDROID_NDK_GLES_INCLUDES)
+        if(EXISTS "${ANDROID_GLES_INCLUDE}/GLES/gl.h")
+            target_compile_options(SDL2 PUBLIC "SHELL:-idirafter ${ANDROID_GLES_INCLUDE}")
+            break()
+        endif()
+    endforeach()
+
     list(APPEND BOREALIS_SOURCE
             ${BOREALIS_PATH}/lib/platforms/sdl
             ${BOREALIS_PATH}/lib/platforms/desktop

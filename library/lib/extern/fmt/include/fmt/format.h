@@ -33,10 +33,6 @@
 #ifndef FMT_FORMAT_H_
 #define FMT_FORMAT_H_
 
-#ifndef _LIBCPP_REMOVE_TRANSITIVE_INCLUDES
-#  define _LIBCPP_REMOVE_TRANSITIVE_INCLUDES
-#  define FMT_REMOVE_TRANSITIVE_INCLUDES
-#endif
 
 #include "base.h"
 
@@ -49,7 +45,18 @@
 #ifndef FMT_MODULE
 #  include <stdlib.h>  // malloc, free
 
-#  include <cmath>    // std::signbit
+#  include <cmath>    // __builtin_signbit
+
+#ifdef isfinite
+#  undef isfinite
+#endif
+#ifdef signbit
+#  undef signbit
+#endif
+#ifdef isnan
+#  undef isnan
+#endif
+
 #  include <cstddef>  // std::byte
 #  include <cstdint>  // uint32_t
 #  include <cstring>  // std::memcpy
@@ -2614,14 +2621,14 @@ FMT_CONSTEXPR20 auto write_float(OutputIt out, const DecimalFP& f,
 }
 
 template <typename T> constexpr auto isnan(T value) -> bool {
-  return value != value;  // std::isnan doesn't support __float128.
+  return value != value;  // __builtin_isnan doesn't support __float128.
 }
 
 template <typename T, typename Enable = void>
 struct has_isfinite : std::false_type {};
 
 template <typename T>
-struct has_isfinite<T, enable_if_t<sizeof(std::isfinite(T())) != 0>>
+struct has_isfinite<T, enable_if_t<sizeof(__builtin_isfinite(T())) != 0>>
     : std::true_type {};
 
 template <typename T,
@@ -2630,12 +2637,12 @@ FMT_CONSTEXPR20 auto isfinite(T value) -> bool {
   constexpr T inf = T(std::numeric_limits<double>::infinity());
   if (is_constant_evaluated())
     return !detail::isnan(value) && value < inf && value > -inf;
-  return std::isfinite(value);
+  return __builtin_isfinite(value);
 }
 template <typename T, FMT_ENABLE_IF(!has_isfinite<T>::value)>
 FMT_CONSTEXPR auto isfinite(T value) -> bool {
   T inf = T(std::numeric_limits<double>::infinity());
-  // std::isfinite doesn't support __float128.
+  // __builtin_isfinite doesn't support __float128.
   return !detail::isnan(value) && value < inf && value > -inf;
 }
 
@@ -2649,7 +2656,7 @@ FMT_INLINE FMT_CONSTEXPR auto signbit(T value) -> bool {
     }
 #endif
   }
-  return std::signbit(static_cast<double>(value));
+  return __builtin_signbit(static_cast<double>(value));
 }
 
 inline FMT_CONSTEXPR20 void adjust_precision(int& precision, int exp10) {
@@ -3506,7 +3513,7 @@ FMT_CONSTEXPR20 auto write(OutputIt out, T value) -> OutputIt {
   auto s = detail::signbit(value) ? sign::minus : sign::none;
   auto mask = exponent_mask<fast_float_t<T>>();
   if ((bit_cast<decltype(mask)>(value) & mask) == mask)
-    return write_nonfinite<Char>(out, std::isnan(value), {}, s);
+    return write_nonfinite<Char>(out, __builtin_isnan(value), {}, s);
 
   auto dec = dragonbox::to_decimal(static_cast<fast_float_t<T>>(value));
   auto significand = dec.significand;
